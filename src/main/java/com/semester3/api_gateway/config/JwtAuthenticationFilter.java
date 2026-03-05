@@ -18,19 +18,29 @@ public class JwtAuthenticationFilter implements GlobalFilter {
         this.jwtUtil = jwtUtil;
     }
     @Override
-    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain){
-        ServerHttpRequest request = exchange.getRequest();
-        if(request.getHeaders().containsKey(HttpHeaders.AUTHORIZATION)){
-            String authHeader =
-                    request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
-            if(authHeader != null && authHeader.startsWith("Bearer")){
-                String token = authHeader.substring(7);
-                if(!jwtUtil.validateToken(token)){
-                    exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
-                    return exchange.getResponse().setComplete();
-                }
-            }
+    public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
+
+        String path = exchange.getRequest().getURI().getPath();
+
+        if (path.startsWith("/api/auth")) {
+            return chain.filter(exchange);
         }
+
+        ServerHttpRequest request = exchange.getRequest();
+        String authHeader = request.getHeaders().getFirst(HttpHeaders.AUTHORIZATION);
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+
+        String token = authHeader.substring(7);
+
+        if (!jwtUtil.validateToken(token)) {
+            exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+            return exchange.getResponse().setComplete();
+        }
+
         return chain.filter(exchange);
     }
 
